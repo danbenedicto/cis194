@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall #-}
+
 {- CIS 194 HW 10
    due Monday, 1 April
 -}
@@ -57,3 +59,43 @@ posInt = Parser f
 ------------------------------------------------------------
 -- Your code goes below here
 ------------------------------------------------------------
+
+-- Exercise 1
+first :: (a -> b) -> (a, c) -> (b, c)
+first f (a, c) = (f a, c)
+
+instance Functor Parser where
+  fmap f (Parser run) = Parser $ fmap (first f) . run
+
+-- Exercise 2
+instance Applicative Parser where
+  pure a = Parser (\s -> Just (a, s))
+  p1 <*> p2 = Parser f
+    where
+      -- I found this unsatisfying... and after doing some research,
+      -- I learned that this would clean up quite nicely with `>>=`,
+      -- which I'm not really supposed to know about yet. :)
+      f xs = case runParser p1 xs of
+        Nothing -> Nothing
+        Just (func, rest) -> first func <$> runParser p2 rest
+
+-- Exercise 3
+abParser :: Parser (Char, Char)
+abParser = (,) <$> char 'a' <*> char 'b'
+
+abParser_ :: Parser ()
+abParser_ = const () <$> abParser
+
+intPair :: Parser [Integer]
+intPair = (\a _ b -> [a, b]) <$> posInt <*> char ' ' <*> posInt
+
+-- Exercise 4
+instance Alternative Parser where
+  empty = Parser (const Nothing)
+  p1 <|> p2 = Parser f
+    where
+      f xs = runParser p1 xs <|> runParser p2 xs
+
+-- Exercise 5
+intOrUppercase :: Parser ()
+intOrUppercase = (const () <$> posInt) <|> (const () <$> satisfy isUpper)
